@@ -17,9 +17,9 @@ namespace ls
 			OrderedMap(const OrderedMap &om);
 			OrderedMap &operator=(OrderedMap &&om) = default;
 			OrderedMap &operator=(const OrderedMap &om);
-			void push(const K &key, const T &value);
-			void replace(const K &key, const T &value);
-			T get(const K &key);
+			int push(const K &key, const T &value);
+			int replace(const K &key, const T &value);
+			T get(int &ec, const K &key);
 			std::vector<std::pair<const K, T>*> &getData();
 			std::map<K, T> &getMapper();
 			void clear();
@@ -45,29 +45,35 @@ namespace ls
 	}
 
 	template<typename K , typename T>
-	void OrderedMap<K, T>::push(const K &key, const T &value)
+	int OrderedMap<K, T>::push(const K &key, const T &value)
 	{
 		auto p = data.emplace(key, value);
 		if(p.second == false)
-			throw Exception(Exception::LS_EEXIST);
+			return Exception::LS_EEXIST;
 		v.emplace_back(&*p.first);
+		return Exception::LS_OK;
 	}
 
 	template<typename K , typename T>
-	void OrderedMap<K, T>::replace(const K &key, const T &value)
+	int OrderedMap<K, T>::replace(const K &key, const T &value)
 	{
 		auto it = data.find(key);
 		if(it == data.end())
-			throw Exception(Exception::LS_ENOCONTENT);
+			return Exception::LS_ENOCONTENT;
 		it -> second = value;
+		return Exception::LS_OK;
 	}
 
 	template<typename K , typename T>
-	T OrderedMap<K, T>::get(const K &key)
+	T OrderedMap<K, T>::get(int &ec, const K &key)
 	{
+		ec = Exception::LS_OK;
 		auto it = data.find(key);
 		if(it == data.end())
-			throw Exception(Exception::LS_ENOCONTENT);
+		{
+			ec = Exception::LS_ENOCONTENT;
+			return T();
+		}
 		return it -> second;
 	}
 
@@ -95,8 +101,8 @@ namespace ls
 	{
 		auto &mapper = o.getMapper();
 		for(auto &it : mapper)
-			push(it.first, it.second) ||
-			replace(it.first, it.second);
+			!push(it.first, it.second) ||
+			!replace(it.first, it.second);
 		return *this;
 	}
 }
